@@ -4,7 +4,10 @@
   "description": "A template for typescript/react/webpack projects",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "webpack",
+    "watch": "webpack -w",
+    "serve": "http-server ./dist",
+    "dev": "concurrently \"npm run watch\" \"npm run serve\"  "
   },
   "author": "Ty Overby",
   "license": "MIT",
@@ -18,7 +21,12 @@
   "dependencies": {
     "@types/react": "^15.0.24",
     "@types/react-dom": "^15.5.0",
+    "@types/react-monaco-editor": "^0.10.0",
+    "concurrently": "^3.5.0",
+    "http-server": "^0.10.0",
     "react": "^15.5.4",
-    "react-dom": "^15.5.4"
+    "react-dom": "^15.5.4",
+    "react-monaco-editor": "^0.12.0",
+    "simple-http": "^0.0.23"
   }
 }
