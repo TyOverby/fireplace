@@ -21,7 +21,7 @@ export class GraphSection extends React.Component<GraphSectionProps> {
 
     onResize() {
         if (this.domNode === null) { return; }
-        render(this.props.state.withWidth(this.domNode.clientWidth));
+        render(this.props.state.withDimensions(this.domNode.clientWidth, this.domNode.clientHeight));
     }
 
     componentDidMount() {
@@ -42,10 +42,6 @@ export class GraphSection extends React.Component<GraphSectionProps> {
                 thread={thread}
                 state={this.props.state}
             />)
-        return <div> <svg className="graph">
-            <g className="thread-group">
-                {threads}
-            </g>
-        </svg></div>
+        return <div> {threads} </div>
     }
 }

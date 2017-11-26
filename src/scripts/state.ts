@@ -12,6 +12,7 @@ export class State {
     readonly current_view: model.View;
     readonly global_view: model.View;
     readonly width: number;
+    readonly height: number;
 
     constructor(
         threads: Thread[],
@@ -21,7 +22,8 @@ export class State {
         hovered_span: Span | null = null,
         current_view: View | null = null,
         global_view: View | null = null,
-        width: number = 1) {
+        width: number = 1,
+        height: number = 1) {
 
         this.threads = threads;
 
@@ -32,9 +34,9 @@ export class State {
 
         this.draw_options = draw_options || {
             bar_height: 20,
-            gap_height: 0,
-            text_padding: 3,
-            text_y_offset: 2,
+            gap_height: -0.5,
+            text_padding: 5,
+            text_y_offset: 12,
         };
 
         this.selected_span = selected_span;
@@ -51,6 +53,7 @@ export class State {
 
         this.global_view = global_view || view;
         this.width = width;
+        this.height = height;
     }
 
     withDrawOptions(draw_options: model.DrawOptions): State {
@@ -62,7 +65,8 @@ export class State {
             this.hovered_span,
             this.current_view,
             this.global_view,
-            this.width);
+            this.width,
+            this.height);
     }
 
     withThreads(threads: Thread[]): State {
@@ -74,19 +78,21 @@ export class State {
             null,
             null,
             null,
-            this.width)
+            this.width,
+            this.height)
     }
 
-    withView(view: model.View): State {
+    withView(view: Partial<model.View>): State {
         return new State(
             this.threads,
             this.timeline_draw_options,
             this.draw_options,
             this.selected_span,
             this.hovered_span,
-            view,
+            { ...this.current_view, ...view },
             this.global_view,
-            this.width)
+            this.width,
+            this.height)
     }
 
     withSelected(span: Span | null): State {
@@ -99,7 +105,8 @@ export class State {
             this.hovered_span,
             view,
             this.global_view,
-            this.width)
+            this.width,
+            this.height)
     }
 
     withHovered(span: Span | null): State {
@@ -111,10 +118,11 @@ export class State {
             span,
             this.current_view,
             this.global_view,
-            this.width)
+            this.width,
+            this.height)
     }
 
-    withWidth(width: number): State {
+    withDimensions(width: number, height: number): State {
         return new State(
             this.threads,
             this.timeline_draw_options,
@@ -123,6 +131,7 @@ export class State {
             this.hovered_span,
             this.current_view,
             this.global_view,
-            width)
+            width,
+            height)
     }
 }

@@ -10,6 +10,7 @@ interface Box {
     w: number;
     h: number;
 }
+
 interface BarProps {
     span: Span;
     state: State;

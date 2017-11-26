@@ -101,12 +101,12 @@ export class Timeline extends React.Component<TimelineProps, TimelineState> {
             if (new_x < global_view.low) {
                 new_x = global_view.low;
             }
-            render(this.props.state.withView({ ... this.props.state.current_view, low: new_x }));
+            render(this.props.state.withView({ low: new_x }));
         } else if (target === 'handle_2_x') {
             if (new_x > global_view.high) {
                 new_x = global_view.high;
             }
-            render(this.props.state.withView({ ... this.props.state.current_view, high: new_x }));
+            render(this.props.state.withView({ high: new_x }));
         }
     }
 
