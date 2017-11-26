@@ -1,6 +1,8 @@
 import * as React from 'react';
-import { Span, DrawOptions, InstanceOptions, View } from '../model';
+import { Span, DrawOptions, View } from '../model';
 import * as state from '../state';
+import { State } from '../state';
+import { render } from '../index';
 
 interface Box {
     x: number;
@@ -10,13 +12,11 @@ interface Box {
 }
 interface BarProps {
     span: Span;
-    draw_options: DrawOptions;
-    instance_options: InstanceOptions;
-    view: View;
+    state: State;
 }
 
 interface LabelProps {
-    draw_options: DrawOptions,
+    state: State;
     x: number;
     y: number;
     width: number;
@@ -27,12 +27,13 @@ interface LabelProps {
 
 class Label extends React.Component<LabelProps> {
     render() {
-        let x = Math.max(0, this.props.x);
-        let width_diff = this.props.x - x;
+        const x = Math.max(0, this.props.x);
+        const width_diff = this.props.x - x;
+        const { draw_options } = this.props.state;
         return <foreignObject
-            x={x + this.props.draw_options.text_padding}
-            y={this.props.y + this.props.draw_options.text_y_offset}
-            width={this.props.width - this.props.draw_options.text_padding * 2 + width_diff}
+            x={x + draw_options.text_padding}
+            y={this.props.y + draw_options.text_y_offset}
+            width={this.props.width - draw_options.text_padding * 2 + width_diff}
             height={this.props.height} >
             <span className="label"> {this.props.label} </span>
         </foreignObject >
@@ -41,32 +42,36 @@ class Label extends React.Component<LabelProps> {
 
 export class Bar extends React.Component<BarProps> {
     hover_start() {
-        state.setHovered(this.props.span);
+        const { span, state } = this.props;
+        render(state.withHovered(span));
     }
 
     hover_end() {
-        if (state.state.hovered_span == this.props.span) {
-            state.setHovered(null);
-        }
+        const { state } = this.props;
+        render(state.withHovered(null));
     }
 
     click() {
-        state.setSelected(this.props.span);
+        const { span, state } = this.props;
+        render(state.withSelected(span));
     }
 
     isVisible(): boolean {
         const { start_ns, end_ns } = this.props.span;
-        const { low, high } = this.props.view;
+        const { low, high } = this.props.state.current_view;
         return !(end_ns <= low || start_ns >= high);
     }
 
     calculateBox(props: BarProps): Box {
         const { start_ns, end_ns, depth } = this.props.span;
-        const { time_scale_factor, start_x } = this.props.instance_options;
-        const { bar_height, gap_height } = this.props.draw_options;
-        const { low, high } = this.props.view;
+        const { low: start_x, high: end_x } = this.props.state.global_view;
+        const { bar_height, gap_height } = this.props.state.draw_options;
+        const { low, high } = this.props.state.current_view;
+        const { width } = this.props.state;
 
-        let x: number = (start_ns - start_x) / time_scale_factor - (this.props.view.low - start_x) / time_scale_factor;
+        const time_scale_factor = (high - low) / width;
+
+        let x: number = (start_ns - start_x) / time_scale_factor - (low - start_x) / time_scale_factor;
         let y: number = depth * (bar_height + gap_height);
         let w: number = (end_ns - start_ns) / time_scale_factor;
         let h: number = bar_height;
@@ -80,10 +85,9 @@ export class Bar extends React.Component<BarProps> {
         let children = this.props.span.children.map((c, i) =>
             <Bar
                 key={i}
-                view={this.props.view}
                 span={c}
-                draw_options={this.props.draw_options}
-                instance_options={this.props.instance_options} />
+                state={this.props.state}
+            />
         );
 
 
@@ -93,7 +97,7 @@ export class Bar extends React.Component<BarProps> {
                 onMouseOver={() => this.hover_start()}
                 onMouseLeave={() => this.hover_end()}>
                 <rect x={x} y={y} width={w} height={h} />
-                <Label x={x} y={y} width={w} height={h} label={this.props.span.name} draw_options={this.props.draw_options} />
+                <Label x={x} y={y} width={w} height={h} label={this.props.span.name} state={this.props.state} />
             </g>
             {children}
         </g>

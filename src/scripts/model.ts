@@ -1,7 +1,6 @@
 export interface View {
     low: number;
     high: number;
-    width: number;
 }
 
 export interface TimelineDrawOptions {

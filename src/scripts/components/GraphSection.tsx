@@ -1,15 +1,13 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import { DrawOptions, Span, InstanceOptions, View, Thread } from '../model';
+import { DrawOptions, Span, View, Thread } from '../model';
 import { Graph } from './FlameGraph';
 import { debouncer } from '../util';
-import * as state from '../state';
+import { State } from '../state';
+import { render } from '../index';
 
 interface GraphSectionProps {
-    draw_options: DrawOptions;
-    instance_options: InstanceOptions;
-    threads: Thread[];
-    view: View;
+    state: State;
 }
 
 export class GraphSection extends React.Component<GraphSectionProps> {
@@ -22,8 +20,8 @@ export class GraphSection extends React.Component<GraphSectionProps> {
     }
 
     onResize() {
-        if (this.domNode === null || state.state.current_view === null) { return; }
-        state.setView({ ...state.state.current_view, width: this.domNode.clientWidth });
+        if (this.domNode === null) { return; }
+        render(this.props.state.withWidth(this.domNode.clientWidth));
     }
 
     componentDidMount() {
@@ -38,12 +36,11 @@ export class GraphSection extends React.Component<GraphSectionProps> {
     }
 
     render() {
-        const threads = this.props.threads.map((thread, idx) =>
+        const threads = this.props.state.threads.map((thread, idx) =>
             < Graph
-                draw_options={this.props.draw_options}
-                instance_options={this.props.instance_options}
+                key={idx}
                 thread={thread}
-                view={this.props.view}
+                state={this.props.state}
             />)
         return <div> <svg className="graph">
             <g className="thread-group">

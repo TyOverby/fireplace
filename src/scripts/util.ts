@@ -8,6 +8,10 @@ export function ownTime(span: Span): number {
     return span.delta - span.children.reduce((a, b) => a + b.delta, 0)
 }
 
+export function clone<T>(a: T): T {
+    return JSON.parse(JSON.stringify(a));
+}
+
 export function calcBoundThreads(threads: Thread[]): { min: number, max: number } {
     let min = Infinity;
     let max = -Infinity;

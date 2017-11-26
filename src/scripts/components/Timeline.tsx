@@ -1,11 +1,12 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import { TimelineDrawOptions, View, InstanceOptions } from '../model';
+import { TimelineDrawOptions, View } from '../model';
 import { debouncer } from '../util';
-import * as state from '../state';
+import { State } from '../state';
+import { render } from '../index';
 
 interface HandleProps {
-    draw_options: TimelineDrawOptions;
+    state: State;
     x: number;
     on_move: (x: number) => void;
     on_start_move: () => void;
@@ -13,9 +14,7 @@ interface HandleProps {
 }
 
 interface TimelineProps {
-    draw_options: TimelineDrawOptions;
-    instance_options: InstanceOptions;
-    view: View;
+    state: State,
 }
 
 interface TimelineState {
@@ -54,8 +53,8 @@ class Handle extends React.Component<HandleProps> {
             className="handle"
             x={this.props.x}
             y={0}
-            width={this.props.draw_options.handle_width}
-            height={this.props.draw_options.height}
+            width={this.props.state.timeline_draw_options.handle_width}
+            height={this.props.state.timeline_draw_options.height}
             rx={2} ry={2}
             onDragStart={() => false} />
     }
@@ -84,61 +83,67 @@ export class Timeline extends React.Component<TimelineProps, TimelineState> {
     }
 
     onMove(target: 'handle_1_x' | 'handle_2_x', x: number) {
-        let offset = (target === 'handle_2_x') ? this.props.draw_options.handle_width : 0;
-        let { handle_width } = this.props.draw_options;
+        const { width, global_view, current_view, timeline_draw_options } = this.props.state;
+
+
+        let offset = (target === 'handle_2_x') ? timeline_draw_options.handle_width : 0;
+        let { handle_width } = timeline_draw_options;
         if (target === 'handle_1_x' && x + handle_width * 2 > this.pos_2) {
             x = this.pos_2 - handle_width * 2;
         } else if (target === 'handle_2_x' && x < this.pos_1 + handle_width) {
             x = this.pos_1 + handle_width * 1;
         }
 
-        let percent_x = (x + offset) / this.props.view.width;
-        let new_x = this.props.instance_options.start_x + (this.props.instance_options.end_x - this.props.instance_options.start_x) * percent_x;
+        let percent_x = (x + offset) / width;
+        let new_x = global_view.low + (this.props.state.global_view.high - this.props.state.global_view.low) * percent_x;
 
         if (target === 'handle_1_x') {
-            if (new_x < this.props.instance_options.start_x) {
-                new_x = this.props.instance_options.start_x;
+            if (new_x < global_view.low) {
+                new_x = global_view.low;
             }
-            state.setView({ ... this.props.view, low: new_x });
+            render(this.props.state.withView({ ... this.props.state.current_view, low: new_x }));
         } else if (target === 'handle_2_x') {
-            if (new_x > this.props.instance_options.end_x) {
-                new_x = this.props.instance_options.end_x;
+            if (new_x > global_view.high) {
+                new_x = global_view.high;
             }
-            state.setView({ ... this.props.view, high: new_x });
+            render(this.props.state.withView({ ... this.props.state.current_view, high: new_x }));
         }
     }
 
     render() {
+        const { handle_width, height } = this.props.state.timeline_draw_options;
+        const { width } = this.props.state;
+
         const style: React.CSSProperties = this.state.currently_dragging ? { cursor: 'ew-resize' } : {};
-        const view_delta = this.props.view.high - this.props.view.low;
-        const total_delta = this.props.instance_options.end_x - this.props.instance_options.start_x;
+        const view_delta = this.props.state.current_view.high - this.props.state.current_view.low;
+        const total_delta = this.props.state.global_view.high - this.props.state.global_view.low;
 
-        const view_percent_1 = (this.props.view.low - this.props.instance_options.start_x) / total_delta;
-        const view_percent_2 = (this.props.view.high - this.props.instance_options.start_x) / total_delta;
+        const view_percent_1 = (this.props.state.current_view.low - this.props.state.global_view.low) / total_delta;
+        const view_percent_2 = (this.props.state.current_view.high - this.props.state.global_view.low) / total_delta;
 
-        const x_1 = view_percent_1 * this.props.view.width;
+        const x_1 = view_percent_1 * width;
         this.pos_1 = x_1;
-        const x_2 = view_percent_2 * this.props.view.width;
+        const x_2 = view_percent_2 * width;
         this.pos_2 = x_2;
 
-        return <svg id="timeline" style={style} height={this.props.draw_options.height} onDragStart={() => false}>
+        return <svg id="timeline" style={style} height={height} onDragStart={() => false}>
             <rect className="background" width={"100%"} height={"50%"} onDragStart={() => false} />
             <rect className="background" width={"100%"} height={"100%"} rx={5} ry={5} onDragStart={() => false} />
             <rect
                 id="selected-bar"
-                x={x_1 + this.props.draw_options.handle_width / 2}
+                x={x_1 + handle_width / 2}
                 y="0"
-                width={x_2 - x_1 - this.props.draw_options.handle_width}
-                height={this.props.draw_options.height} />
+                width={x_2 - x_1 - handle_width}
+                height={height} />
             <Handle
                 x={x_1}
-                draw_options={this.props.draw_options}
+                state={this.props.state}
                 on_move={x => this.onMove('handle_1_x', x)}
                 on_start_move={() => this.onStartMove()}
                 on_end_move={() => this.onEndMove()} />
             <Handle
-                x={x_2 - this.props.draw_options.handle_width}
-                draw_options={this.props.draw_options}
+                x={x_2 - handle_width}
+                state={this.props.state}
                 on_move={x => this.onMove('handle_2_x', x)}
                 on_start_move={() => this.onStartMove()}
                 on_end_move={() => this.onEndMove()} />
