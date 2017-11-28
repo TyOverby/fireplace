@@ -3,6 +3,13 @@ export interface View {
     high: number;
 }
 
+export interface Box {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+}
+
 export interface TimelineDrawOptions {
     /// The height of the timeline
     height: number;
@@ -19,6 +26,12 @@ export interface DrawOptions {
     text_padding: number,
     /// The distance from the top of the bar that the text should be drawn
     text_y_offset: number,
+    /// The border width for the thread bounding box
+    thread_border_width: number,
+    /// The amount of padding at the bottom of a thread border
+    thread_bottom_padding: number,
+    /// The amount of padding at the top of a thread border
+    thread_top_padding: number,
 }
 
 export interface Note {

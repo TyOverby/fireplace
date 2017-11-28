@@ -1,4 +1,5 @@
-import { Span, Thread } from "./model";
+import { Span, Thread, Box } from "./model";
+import { State } from "./state";
 
 export function countChildrenRec(span: Span): number {
     return span.children.length + span.children.map(countChildrenRec).reduce((a, b) => a + b, 0)
@@ -58,4 +59,35 @@ export function debouncer(): (f: Func | 'cancel') => void {
             });
         }
     }
+}
+
+export function max_depth(spans: Span[]): number {
+    let max = 0;
+    for (const span of spans) {
+        max = Math.max(max, span.depth);
+        max = Math.max(max, max_depth(span.children));
+    }
+    return max
+}
+
+export function calculateBox(state: State, start_ns: number, end_ns: number, depth: number): Box {
+    const { low: start_x, high: end_x } = state.global_view;
+    const { bar_height, gap_height } = state.draw_options;
+    const { low, high } = state.current_view;
+    const { width } = state;
+
+    const time_scale_factor = (high - low) / width;
+
+    let x: number = (start_ns - start_x) / time_scale_factor - (low - start_x) / time_scale_factor;
+    let y: number = depth * (bar_height + gap_height);
+    let w: number = (end_ns - start_ns) / time_scale_factor;
+    let h: number = bar_height;
+    return { x, y, w, h }
+}
+
+
+export function isVisible(span: Span, state: State): boolean {
+    const { start_ns, end_ns } = span;
+    const { low, high } = state.current_view;
+    return !(end_ns <= low || start_ns >= high);
 }

@@ -1,16 +1,12 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import { DrawOptions, Span, View, Thread } from '../model';
+import { DrawOptions, Span, View, Thread, Box } from '../model';
 import { Bar } from './FlameBar';
-import { debouncer } from '../util';
+import { debouncer, calculateBox, isVisible, max_depth, countChildrenRec } from '../util';
+import { MouseRegion } from '../mouseRegion';
 import { State } from '../state';
+import { render } from '../index';
 
-interface Box {
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-}
 
 interface GraphProps {
     thread: Thread;
@@ -20,6 +16,7 @@ interface GraphProps {
 export class Graph extends React.Component<GraphProps> {
     canvasDom: HTMLCanvasElement | null = null;
     canvasCtx: CanvasRenderingContext2D | null = null;
+    mouseRegion: MouseRegion = new MouseRegion(() => { }, () => { });
 
     componentDidMount() {
         this.canvasDom = ReactDOM.findDOMNode(this) as HTMLCanvasElement;
@@ -32,70 +29,122 @@ export class Graph extends React.Component<GraphProps> {
             this.canvasDom.height = 2 * this.props.state.height;
         }
         if (this.canvasCtx) {
+            this.mouseRegion = new MouseRegion(
+                (state: State) => {
+                    if (state.hovered_span !== null) {
+                        render(state.withHovered(null))
+                    }
+                },
+                (state: State) => { });
             this.canvasCtx.save();
             this.canvasCtx.scale(2, 2);
+
+            const angle = (this.props.thread.id * 103969) % 360;
+            draw_thread(this.props.thread, angle, this.canvasCtx, this.props.state);
+
             this.canvasCtx.fillStyle = "rgb(0, 0, 0)";
             this.canvasCtx.strokeStyle = "rgb(255, 100, 0)";
 
+            let child_idx = 0;
             for (const span of this.props.thread.spans) {
-                draw_bar(span, this.props.state, this.canvasCtx);
+                child_idx += 1;
+                draw_bar(span, angle, this.props.state.draw_options.thread_top_padding, child_idx, this.props.state, this.canvasCtx, this.mouseRegion);
             }
+
 
             this.canvasCtx.restore();
         }
     }
 
+    onMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
+        const target = e.currentTarget;
+        this.mouseRegion.pollMove(e.clientX - target.offsetLeft, e.clientY - target.offsetTop, this.props.state);
+    }
+
+    onMouseClick(e: React.MouseEvent<HTMLCanvasElement>) {
+        const target = e.currentTarget;
+        this.mouseRegion.pollClick(e.clientX - target.offsetLeft, e.clientY - target.offsetTop, this.props.state);
+    }
+
     render() {
-        return <canvas style={({ position: 'absolute', width: this.props.state.width, height: this.props.state.height })} />
+        return <canvas
+            style={({ position: 'absolute', width: this.props.state.width, height: this.props.state.height })}
+            onMouseMove={e => this.onMouseMove(e)}
+            onClick={e => this.onMouseClick(e)} />
     }
 }
 
-function draw_bar(span: Span, state: State, ctx: CanvasRenderingContext2D) {
+function draw_thread(thread: Thread, angle: number, ctx: CanvasRenderingContext2D, state: State) {
+    const depth = max_depth(thread.spans);
+    let low = thread.spans.map(s => s.start_ns).reduce((a, b) => Math.min(a, b), Infinity);
+    let high = thread.spans.map(s => s.end_ns).reduce((a, b) => Math.max(a, b), -Infinity);
+
+    if (low === Infinity || high === -Infinity) { return }
+
+    let box = calculateBox(state, low, high, 0);
+    let x_2 = box.x + box.w;
+    box.x = Math.max(box.x, 0);
+    box.w = Math.min(x_2 - box.x, state.width);
+
+    ctx.fillStyle = `hsl(${angle}, 80%, 80%)`;
+    ctx.strokeStyle = `hsl(${angle}, 30%, 65%)`;
+    ctx.lineWidth = state.draw_options.thread_border_width;
+    ctx.setLineDash([5]);
+
+    ctx.fillRect(box.x, box.y, box.w, (depth + 1) * box.h + state.draw_options.thread_bottom_padding + state.draw_options.thread_top_padding);
+    ctx.strokeRect(box.x + 1, box.y + 1, box.w - 2, (depth + 1) * box.h - 2 + state.draw_options.thread_bottom_padding + state.draw_options.thread_top_padding);
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = "rgb(0, 0, 0)";
+    ctx.save();
+    ctx.font = "bold 10pt sans-serif"
+    let x = Math.max(box.x, 0) + state.draw_options.text_padding;
+    ctx.fillText(`Thread: "${thread.name}" ${thread.id}`, x, box.y + 20);
+    ctx.restore();
+}
+
+function draw_bar(span: Span, angle: number, height_offset: number, child_idx: number, state: State, ctx: CanvasRenderingContext2D, mouseRegion: MouseRegion) {
     if (!isVisible(span, state)) { }
+    const angle_delta = (child_idx + 1) * span.children.length;
+    angle += angle_delta * 2;
+
     // Raw values
-    const { x, y, w, h } = calculateBox(state, span);
+    let { x, y, w, h } = calculateBox(state, span.start_ns, span.end_ns, span.depth);
+    y += height_offset;
     // rounded, TODO: perf
     const [f_x, f_y, f_w, f_h] = [x, y, w, h].map(x => Math.round(x));
     // offset, TODO: perf
     const [o_x, o_y, o_w, o_h] = [f_x, f_y, f_w, f_h].map(x => x + 0.5);
 
+    ctx.fillStyle = `hsl(${angle}, 70%, 70%)`;
+    ctx.strokeStyle = `hsl(${angle}, 40%, 50%)`;
     ctx.fillRect(f_x, f_y, f_w, f_h);
     ctx.strokeRect(x, y, w, h);
+    mouseRegion.addRegion(
+        { x: f_x, y: f_y, w: f_w, h: f_h },
+        (state: State) => {
+            if (state.hovered_span !== span) {
+                render(state.withHovered(span));
+            }
+        },
+        () => {
+            if (state.selected_span !== span) {
+                render(state.withSelected(span));
+            }
+        });
 
     //text
     ctx.save();
     ctx.beginPath()
     ctx.rect(f_x, f_y, f_w - state.draw_options.text_padding * 1, f_h);
     ctx.clip();
-    ctx.fillStyle = "rgb(255,0,0)";
-    ctx.fillText(span.name, Math.max(0, f_x + state.draw_options.text_padding), f_y + state.draw_options.text_y_offset);
+    ctx.fillStyle = "rgb(0, 0, 0)";
+    ctx.fillText(span.name, Math.max(state.draw_options.text_padding, f_x + state.draw_options.text_padding), f_y + state.draw_options.text_y_offset);
     ctx.restore();
 
-
-
+    let new_child_idx = 0;
     for (const child of span.children) {
-        draw_bar(child, state, ctx);
+        draw_bar(child, angle, height_offset, new_child_idx, state, ctx, mouseRegion);
+        new_child_idx += 1;
     }
-}
-
-function isVisible(span: Span, state: State): boolean {
-    const { start_ns, end_ns } = span;
-    const { low, high } = state.current_view;
-    return !(end_ns <= low || start_ns >= high);
-}
-
-function calculateBox(state: State, span: Span): Box {
-    const { start_ns, end_ns, depth } = span;
-    const { low: start_x, high: end_x } = state.global_view;
-    const { bar_height, gap_height } = state.draw_options;
-    const { low, high } = state.current_view;
-    const { width } = state;
-
-    const time_scale_factor = (high - low) / width;
-
-    let x: number = (start_ns - start_x) / time_scale_factor - (low - start_x) / time_scale_factor;
-    let y: number = depth * (bar_height + gap_height);
-    let w: number = (end_ns - start_ns) / time_scale_factor;
-    let h: number = bar_height;
-    return { x, y, w, h }
 }

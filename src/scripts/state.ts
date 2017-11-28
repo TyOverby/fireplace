@@ -34,19 +34,25 @@ export class State {
 
         this.draw_options = draw_options || {
             bar_height: 20,
-            gap_height: -0.5,
+            gap_height: 0,
             text_padding: 5,
             text_y_offset: 12,
+            thread_border_width: 2,
+            thread_bottom_padding: 10,
+            thread_top_padding: 30,
         };
 
         this.selected_span = selected_span;
 
         this.hovered_span = hovered_span;
 
-        let { min, max } = calcBoundThreads(threads);
+        const { min, max } = calcBoundThreads(threads);
+        const dist = max - min;
+        const padding = dist * 0.05;
+
         const view = {
-            low: min,
-            high: max,
+            low: min - padding,
+            high: max + padding,
         };
 
         this.current_view = current_view || view;

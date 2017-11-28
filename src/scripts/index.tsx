@@ -34,7 +34,9 @@ export class Index extends React.Component<IndexProps> {
 const debounce = debouncer();
 
 export function render(state: State) {
-    debounce(() => ReactDOM.render(<Index state={state} />, document.querySelector("#container")));
+    debounce(() => {
+        ReactDOM.render(<Index state={state} />, document.querySelector("#container"));
+    });
 }
 
 render(new State(example_threads));
