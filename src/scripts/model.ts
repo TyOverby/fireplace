@@ -19,19 +19,21 @@ export interface TimelineDrawOptions {
 
 export interface DrawOptions {
     /// The height of the SVG bar
-    bar_height: number,
+    bar_height: number;
     /// The amount of space left in a gap between bars
-    gap_height: number,
+    gap_height: number;
     /// The amount of padding on the left side of the text
-    text_padding: number,
+    text_padding: number;
     /// The distance from the top of the bar that the text should be drawn
-    text_y_offset: number,
+    text_y_offset: number;
     /// The border width for the thread bounding box
-    thread_border_width: number,
+    thread_border_width: number;
     /// The amount of padding at the bottom of a thread border
-    thread_bottom_padding: number,
+    thread_bottom_padding: number;
     /// The amount of padding at the top of a thread border
-    thread_top_padding: number,
+    thread_top_padding: number;
+    // The amount of padding between thread boxes
+    inter_thread_padding: number;
 }
 
 export interface Note {

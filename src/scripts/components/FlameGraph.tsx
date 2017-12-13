@@ -9,7 +9,6 @@ import { render } from '../index';
 
 
 interface GraphProps {
-    thread: Thread;
     state: State;
 }
 
@@ -38,20 +37,7 @@ export class Graph extends React.Component<GraphProps> {
                 (state: State) => { });
             this.canvasCtx.save();
             this.canvasCtx.scale(2, 2);
-
-            const angle = (this.props.thread.id * 103969) % 360;
-            draw_thread(this.props.thread, angle, this.canvasCtx, this.props.state);
-
-            this.canvasCtx.fillStyle = "rgb(0, 0, 0)";
-            this.canvasCtx.strokeStyle = "rgb(255, 100, 0)";
-
-            let child_idx = 0;
-            for (const span of this.props.thread.spans) {
-                child_idx += 1;
-                draw_bar(span, angle, this.props.state.draw_options.thread_top_padding, child_idx, this.props.state, this.canvasCtx, this.mouseRegion);
-            }
-
-
+            draw_threads(this.props.state, this.canvasCtx, this.mouseRegion);
             this.canvasCtx.restore();
         }
     }
@@ -74,25 +60,50 @@ export class Graph extends React.Component<GraphProps> {
     }
 }
 
-function draw_thread(thread: Thread, angle: number, ctx: CanvasRenderingContext2D, state: State) {
+function draw_threads(state: State, canvasCtx: CanvasRenderingContext2D, mouseRegion: MouseRegion) {
+    // Gap between timeline and graph
+    canvasCtx.translate(0, state.draw_options.inter_thread_padding);
+    mouseRegion.translate_y(state.draw_options.inter_thread_padding);
+
+    for (const thread of state.threads) {
+        const angle = (thread.id * 103969) % 360;
+        const thread_box = draw_thread_box(thread, angle, canvasCtx, state);
+
+        canvasCtx.fillStyle = "rgb(0, 0, 0)";
+        canvasCtx.strokeStyle = "rgb(255, 100, 0)";
+
+        let child_idx = 0;
+        for (const span of thread.spans) {
+            child_idx += 1;
+            draw_bar(span, angle, state.draw_options.thread_top_padding, child_idx, state, canvasCtx, mouseRegion);
+        }
+
+        canvasCtx.translate(0, thread_box.h + state.draw_options.inter_thread_padding);
+        mouseRegion.translate_y(thread_box.h + state.draw_options.inter_thread_padding);
+    }
+}
+
+function draw_thread_box(thread: Thread, angle: number, ctx: CanvasRenderingContext2D, state: State): Box {
     const depth = max_depth(thread.spans);
     let low = thread.spans.map(s => s.start_ns).reduce((a, b) => Math.min(a, b), Infinity);
     let high = thread.spans.map(s => s.end_ns).reduce((a, b) => Math.max(a, b), -Infinity);
 
-    if (low === Infinity || high === -Infinity) { return }
+    if (low === Infinity || high === -Infinity) { return { x: 0, y: 0, w: 0, h: 0 }; }
 
     let box = calculateBox(state, low, high, 0);
     let x_2 = box.x + box.w;
     box.x = Math.max(box.x, 0);
     box.w = Math.min(x_2 - box.x, state.width);
 
+    box.h = (depth + 1) * box.h + state.draw_options.thread_bottom_padding + state.draw_options.thread_top_padding;
+
     ctx.fillStyle = `hsl(${angle}, 80%, 80%)`;
     ctx.strokeStyle = `hsl(${angle}, 30%, 65%)`;
     ctx.lineWidth = state.draw_options.thread_border_width;
     ctx.setLineDash([5]);
 
-    ctx.fillRect(box.x, box.y, box.w, (depth + 1) * box.h + state.draw_options.thread_bottom_padding + state.draw_options.thread_top_padding);
-    ctx.strokeRect(box.x + 1, box.y + 1, box.w - 2, (depth + 1) * box.h - 2 + state.draw_options.thread_bottom_padding + state.draw_options.thread_top_padding);
+    ctx.fillRect(box.x, box.y, box.w, box.h);
+    ctx.strokeRect(box.x + 1, box.y + 1, box.w - 2, box.h - 2);
     ctx.setLineDash([]);
 
     ctx.fillStyle = "rgb(0, 0, 0)";
@@ -101,6 +112,8 @@ function draw_thread(thread: Thread, angle: number, ctx: CanvasRenderingContext2
     let x = Math.max(box.x, 0) + state.draw_options.text_padding;
     ctx.fillText(`Thread: "${thread.name}" ${thread.id}`, x, box.y + 20);
     ctx.restore();
+
+    return box;
 }
 
 function draw_bar(span: Span, angle: number, height_offset: number, child_idx: number, state: State, ctx: CanvasRenderingContext2D, mouseRegion: MouseRegion) {

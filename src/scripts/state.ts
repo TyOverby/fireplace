@@ -40,6 +40,7 @@ export class State {
             thread_border_width: 2,
             thread_bottom_padding: 10,
             thread_top_padding: 30,
+            inter_thread_padding: 20,
         };
 
         this.selected_span = selected_span;

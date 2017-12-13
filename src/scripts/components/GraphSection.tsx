@@ -39,7 +39,6 @@ export class GraphSection extends React.Component<GraphSectionProps> {
         const threads = this.props.state.threads.map((thread, idx) =>
             < Graph
                 key={idx}
-                thread={thread}
                 state={this.props.state}
             />)
         return <div> {threads} </div>

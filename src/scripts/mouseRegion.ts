@@ -13,14 +13,30 @@ export class MouseRegion {
     regions: { box: Box, over: Func, click: Func }[] = [];
     noneHovered: Func;
     noneClicked: Func;
+    offset_y: number = 0;
 
     constructor(noneHovered: Func, noneClicked: Func) {
         this.noneHovered = noneHovered;
         this.noneClicked = noneClicked;
     }
 
+    translate_y(delta: number) {
+        this.offset_y += delta;
+    }
+
     addRegion(box: Box, over: Func, click: Func) {
-        this.regions.push({ box, over, click });
+        const adjusted_box = {
+            x: box.x,
+            y: box.y + this.offset_y,
+            w: box.w,
+            h: box.h
+        };
+
+        this.regions.push({
+            box: adjusted_box,
+            over,
+            click
+        });
     }
 
     pollMove(x: number, y: number, state: State) {
