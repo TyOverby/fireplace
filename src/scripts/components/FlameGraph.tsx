@@ -1,21 +1,26 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { DrawOptions, Span, View, Thread, Box } from '../model';
-import { Bar } from './FlameBar';
 import { debouncer, calculateBox, isVisible, max_depth, countChildrenRec } from '../util';
 import { MouseRegion } from '../mouseRegion';
 import { State } from '../state';
-import { render } from '../index';
+import { RenderFunc } from '../index';
 
 
 interface GraphProps {
     state: State;
+    threads: Thread[];
+    render: RenderFunc;
 }
 
 export class Graph extends React.Component<GraphProps> {
     canvasDom: HTMLCanvasElement | null = null;
     canvasCtx: CanvasRenderingContext2D | null = null;
     mouseRegion: MouseRegion = new MouseRegion(() => { }, () => { });
+
+    shouldComponentUpdate() {
+        return true;
+    }
 
     componentDidMount() {
         this.canvasDom = ReactDOM.findDOMNode(this) as HTMLCanvasElement;
@@ -31,13 +36,13 @@ export class Graph extends React.Component<GraphProps> {
             this.mouseRegion = new MouseRegion(
                 (state: State) => {
                     if (state.hovered_span !== null) {
-                        render(state.withHovered(null))
+                        this.props.render({ hovered_span: null });
                     }
                 },
                 (state: State) => { });
             this.canvasCtx.save();
             this.canvasCtx.scale(2, 2);
-            draw_threads(this.props.state, this.canvasCtx, this.mouseRegion);
+            draw_threads(this.props, this.canvasCtx, this.mouseRegion);
             this.canvasCtx.restore();
         }
     }
@@ -60,14 +65,14 @@ export class Graph extends React.Component<GraphProps> {
     }
 }
 
-function draw_threads(state: State, canvasCtx: CanvasRenderingContext2D, mouseRegion: MouseRegion) {
+function draw_threads(props: GraphProps, canvasCtx: CanvasRenderingContext2D, mouseRegion: MouseRegion) {
     // Gap between timeline and graph
-    canvasCtx.translate(0, state.draw_options.inter_thread_padding);
-    mouseRegion.translate_y(state.draw_options.inter_thread_padding);
+    canvasCtx.translate(0, props.state.draw_options.inter_thread_padding);
+    mouseRegion.translate_y(props.state.draw_options.inter_thread_padding);
 
-    for (const thread of state.threads) {
+    for (const thread of props.threads) {
         const angle = (thread.id * 103969) % 360;
-        const thread_box = draw_thread_box(thread, angle, canvasCtx, state);
+        const thread_box = draw_thread_box(thread, angle, canvasCtx, props.state);
 
         canvasCtx.fillStyle = "rgb(0, 0, 0)";
         canvasCtx.strokeStyle = "rgb(255, 100, 0)";
@@ -75,11 +80,11 @@ function draw_threads(state: State, canvasCtx: CanvasRenderingContext2D, mouseRe
         let child_idx = 0;
         for (const span of thread.spans) {
             child_idx += 1;
-            draw_bar(span, angle, state.draw_options.thread_top_padding, child_idx, state, canvasCtx, mouseRegion);
+            draw_bar(span, angle, props.state.draw_options.thread_top_padding, child_idx, props.state, props.render, canvasCtx, mouseRegion);
         }
 
-        canvasCtx.translate(0, thread_box.h + state.draw_options.inter_thread_padding);
-        mouseRegion.translate_y(thread_box.h + state.draw_options.inter_thread_padding);
+        canvasCtx.translate(0, thread_box.h + props.state.draw_options.inter_thread_padding);
+        mouseRegion.translate_y(thread_box.h + props.state.draw_options.inter_thread_padding);
     }
 }
 
@@ -116,7 +121,7 @@ function draw_thread_box(thread: Thread, angle: number, ctx: CanvasRenderingCont
     return box;
 }
 
-function draw_bar(span: Span, angle: number, height_offset: number, child_idx: number, state: State, ctx: CanvasRenderingContext2D, mouseRegion: MouseRegion) {
+function draw_bar(span: Span, angle: number, height_offset: number, child_idx: number, state: State, render: RenderFunc, ctx: CanvasRenderingContext2D, mouseRegion: MouseRegion) {
     if (!isVisible(span, state)) { }
     const angle_delta = (child_idx + 1) * span.children.length;
     angle += angle_delta * 2;
@@ -137,12 +142,12 @@ function draw_bar(span: Span, angle: number, height_offset: number, child_idx: n
         { x: f_x, y: f_y, w: f_w, h: f_h },
         (state: State) => {
             if (state.hovered_span !== span) {
-                render(state.withHovered(span));
+                render({ hovered_span: span });
             }
         },
-        () => {
+        (state: State) => {
             if (state.selected_span !== span) {
-                render(state.withSelected(span));
+                render({ selected_span: span });
             }
         });
 
@@ -157,7 +162,7 @@ function draw_bar(span: Span, angle: number, height_offset: number, child_idx: n
 
     let new_child_idx = 0;
     for (const child of span.children) {
-        draw_bar(child, angle, height_offset, new_child_idx, state, ctx, mouseRegion);
+        draw_bar(child, angle, height_offset, new_child_idx, state, render, ctx, mouseRegion);
         new_child_idx += 1;
     }
 }

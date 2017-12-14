@@ -3,11 +3,12 @@ import * as ReactDOM from 'react-dom';
 import { TimelineDrawOptions, View } from '../model';
 import { debouncer } from '../util';
 import { State } from '../state';
-import { render } from '../index';
+import { RenderFunc } from '../index';
 
 interface HandleProps {
     state: State;
     x: number;
+    render: RenderFunc;
     on_move: (x: number) => void;
     on_start_move: () => void;
     on_end_move: () => void;
@@ -15,6 +16,7 @@ interface HandleProps {
 
 interface TimelineProps {
     state: State,
+    render: RenderFunc;
 }
 
 interface TimelineState {
@@ -27,9 +29,10 @@ class Handle extends React.Component<HandleProps> {
 
     componentDidMount() {
         this.dom_node = ReactDOM.findDOMNode(this) as SVGRectElement;
+        const parent = (this.dom_node.parentElement as HTMLElement).parentElement as HTMLElement;
 
         const move_handler = (e: MouseEvent) => {
-            this.props.on_move(e.clientX);
+            this.props.on_move(e.clientX - parent.offsetLeft);
         }
 
         const up_handler = () => {
@@ -101,12 +104,22 @@ export class Timeline extends React.Component<TimelineProps, TimelineState> {
             if (new_x < global_view.low) {
                 new_x = global_view.low;
             }
-            render(this.props.state.withView({ low: new_x }));
+            this.props.render({
+                current_view: {
+                    low: new_x,
+                    high: this.props.state.current_view.high
+                }
+            });
         } else if (target === 'handle_2_x') {
             if (new_x > global_view.high) {
                 new_x = global_view.high;
             }
-            render(this.props.state.withView({ high: new_x }));
+            this.props.render({
+                current_view: {
+                    low: this.props.state.current_view.low,
+                    high: new_x,
+                }
+            });
         }
     }
 
@@ -140,13 +153,15 @@ export class Timeline extends React.Component<TimelineProps, TimelineState> {
                 state={this.props.state}
                 on_move={x => this.onMove('handle_1_x', x)}
                 on_start_move={() => this.onStartMove()}
-                on_end_move={() => this.onEndMove()} />
+                on_end_move={() => this.onEndMove()}
+                render={this.props.render} />
             <Handle
                 x={x_2 - handle_width}
                 state={this.props.state}
                 on_move={x => this.onMove('handle_2_x', x)}
                 on_start_move={() => this.onStartMove()}
-                on_end_move={() => this.onEndMove()} />
+                on_end_move={() => this.onEndMove()}
+                render={this.props.render} />
         </svg>
     }
 }

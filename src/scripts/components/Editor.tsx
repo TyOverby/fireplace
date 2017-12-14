@@ -15,11 +15,9 @@ export class Editor extends React.Component<EditorProps, EditorState> {
         };
     }
     editorDidMount(editor: monaco.editor.ICodeEditor, monacoModule: typeof monaco) {
-        console.log('editorDidMount', editor);
         editor.focus();
     }
     onChange(val: string, ev: monaco.editor.IModelContentChangedEvent) {
-        console.log('onChange', val, ev);
     }
     render() {
         const code = this.state.code;

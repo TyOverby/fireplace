@@ -4,10 +4,12 @@ import { DrawOptions, Span, View, Thread } from '../model';
 import { Graph } from './FlameGraph';
 import { debouncer } from '../util';
 import { State } from '../state';
-import { render } from '../index';
+import { RenderFunc } from '../index';
 
 interface GraphSectionProps {
     state: State;
+    threads: Thread[];
+    render: RenderFunc;
 }
 
 export class GraphSection extends React.Component<GraphSectionProps> {
@@ -15,13 +17,20 @@ export class GraphSection extends React.Component<GraphSectionProps> {
     debounce = debouncer();
     on_resize = () => this.debounce(() => this.onResize());
 
-    constructor() {
-        super();
+    constructor(props: GraphSectionProps) {
+        super(props);
     }
 
     onResize() {
         if (this.domNode === null) { return; }
-        render(this.props.state.withDimensions(this.domNode.clientWidth, this.domNode.clientHeight));
+        this.props.render({
+            width: this.domNode.clientWidth,
+            height: this.domNode.clientHeight,
+        });
+    }
+
+    shouldComponentUpdate() {
+        return true;
     }
 
     componentDidMount() {
@@ -30,17 +39,23 @@ export class GraphSection extends React.Component<GraphSectionProps> {
         this.on_resize();
     }
 
+    componentDidUpdate() {
+    }
+
     componentWillUnmount() {
         this.debounce('cancel');
         window.removeEventListener('resize', this.on_resize);
     }
 
     render() {
-        const threads = this.props.state.threads.map((thread, idx) =>
-            < Graph
+        const threads = this.props.threads.map((thread, idx) => {
+            return <Graph
                 key={idx}
+                threads={this.props.threads}
                 state={this.props.state}
-            />)
+                render={this.props.render}
+            />
+        })
         return <div> {threads} </div>
     }
 }

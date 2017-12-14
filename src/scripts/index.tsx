@@ -2,41 +2,64 @@ import * as React from "react";
 import * as ReactDOM from "react-dom";
 
 import { example_threads } from "./testing";
-import { State } from './state';
-import { Span, DrawOptions } from "./model";
-import { debouncer } from './util';
+import { State, defaultState } from './state';
+import { Span, DrawOptions, Thread } from "./model";
+import { debouncer, calcBoundThreads } from './util';
 
 import { HoverBar } from './components/HoverBar';
 import { GraphSection } from "./components/GraphSection";
 import { Timeline } from "./components/Timeline";
 
 interface IndexProps {
-    state: State
+    threads: Thread[];
 }
 
-export class Index extends React.Component<IndexProps> {
+export type RenderFunc = (state: Partial<State>) => void;
+
+export class Index extends React.Component<IndexProps, State> {
+    debounce = debouncer();
+
+    constructor(props: IndexProps) {
+        super(props);
+        this.state = defaultState(props.threads);
+        this.setState
+    }
+
+    componentWillUnmount() {
+        this.debounce('cancel');
+    }
+
+    componentWillReceiveProps(props: Readonly<IndexProps>) {
+        const { min, max } = calcBoundThreads(props.threads);
+        const dist = max - min;
+        const padding = dist * 0.05;
+
+        const view = {
+            low: min - padding,
+            high: max + padding,
+        };
+
+        this.setState({ current_view: view, global_view: view });
+    }
+
     render() {
-        if (!this.props.state.current_view) {
+        if (!this.state.current_view) {
             return <div />
         }
 
-        //const timing_span = this.props.state.selected_span || this.props.state.top_level_span;
-        const { low, high } = this.props.state.current_view;
+        const { low, high } = this.state.current_view;
+
+        const that = this;
+        function setStateLocal(ns: Partial<State>) {
+            that.setState(ns as any);
+        }
 
         return <div id="application">
-            <Timeline state={this.props.state} />
-            <GraphSection state={this.props.state} />
-            <HoverBar hovered={this.props.state.hovered_span}> </HoverBar>
+            <Timeline state={this.state} render={setStateLocal} />
+            <GraphSection state={this.state} threads={this.props.threads} render={setStateLocal} />
+            <HoverBar hovered={this.state.hovered_span}> </HoverBar>
         </div>
     }
 }
 
-const debounce = debouncer();
-
-export function render(state: State) {
-    debounce(() => {
-        ReactDOM.render(<Index state={state} />, document.querySelector("#container"));
-    });
-}
-
-render(new State(example_threads));
+ReactDOM.render(<Index threads={example_threads} />, document.querySelector("#container"));
