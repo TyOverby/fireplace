@@ -11,7 +11,7 @@ const timeline_background_style: React.CSSProperties = {
 
 const timeline_style: React.CSSProperties = {
     userSelect: "none",
-    mozUserSelect: "none",
+    MozUserSelect: "none",
 };
 
 const handle_style: React.CSSProperties = {
@@ -45,28 +45,49 @@ class Handle extends React.Component<HandleProps> {
     dom_node: SVGRectElement | null = null;
     is_mouse_down: boolean = false;
 
+    up_handler: any;
+    down_handler: any;
+    move_handler: any;
+
     componentDidMount() {
         this.dom_node = ReactDOM.findDOMNode(this) as SVGRectElement;
         const parent = (this.dom_node.parentElement as HTMLElement).parentElement as HTMLElement;
 
-        const move_handler = (e: MouseEvent) => {
+        this.move_handler = (e: MouseEvent) => {
             this.props.on_move(e.clientX - parent.offsetLeft);
         }
 
-        const up_handler = () => {
+        this.up_handler = () => {
             this.is_mouse_down = false;
             this.props.on_end_move();
-            document.removeEventListener('mousemove', move_handler);
+
+            document.removeEventListener('mousemove', this.move_handler);
+            this.move_handler = null
+
+            document.removeEventListener('mouseup', this.up_handler);
+            this.up_handler = null
         };
 
-        const down_handler = () => {
+        this.down_handler = () => {
             this.is_mouse_down = true;
             this.props.on_start_move();
-            document.addEventListener('mouseup', up_handler);
-            document.addEventListener('mousemove', move_handler);
+            document.addEventListener('mouseup', this.up_handler);
+            document.addEventListener('mousemove', this.move_handler);
         };
 
-        this.dom_node.addEventListener('mousedown', down_handler);
+        this.dom_node.addEventListener('mousedown', this.down_handler);
+    }
+
+    componentWillUnmount() {
+        if (this.up_handler != null) {
+            document.removeEventListener('mouseup', this.up_handler);
+        }
+        if (this.down_handler != null) {
+            document.removeEventListener('mousedown', this.down_handler);
+        }
+        if (this.move_handler != null) {
+            document.removeEventListener('mousemove', this.move_handler);
+        }
     }
 
     render() {
