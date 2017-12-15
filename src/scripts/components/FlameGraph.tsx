@@ -4,7 +4,7 @@ import { DrawOptions, Span, View, Thread, Box } from '../model';
 import { debouncer, calculateBox, isVisible, max_depth, countChildrenRec } from '../util';
 import { MouseRegion } from '../mouseRegion';
 import { State } from '../state';
-import { RenderFunc } from '../index';
+import { RenderFunc } from './Fireplace';
 
 
 interface GraphProps {

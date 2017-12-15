@@ -3,7 +3,25 @@ import * as ReactDOM from 'react-dom';
 import { TimelineDrawOptions, View } from '../model';
 import { debouncer } from '../util';
 import { State } from '../state';
-import { RenderFunc } from '../index';
+import { RenderFunc } from './Fireplace';
+
+const timeline_background_style: React.CSSProperties = {
+    fill: "rgb(21, 23, 34)",
+};
+
+const timeline_style: React.CSSProperties = {
+    userSelect: "none",
+    mozUserSelect: "none",
+};
+
+const handle_style: React.CSSProperties = {
+    fill: "rgba(255, 255, 255, 0.8)",
+    cursor: "ew-resize",
+}
+
+const selected_bar_style: React.CSSProperties = {
+    fill: "rgba(200, 200, 255, 0.2)",
+}
 
 interface HandleProps {
     state: State;
@@ -53,7 +71,7 @@ class Handle extends React.Component<HandleProps> {
 
     render() {
         return <rect
-            className="handle"
+            style={handle_style}
             x={this.props.x}
             y={0}
             width={this.props.state.timeline_draw_options.handle_width}
@@ -127,7 +145,8 @@ export class Timeline extends React.Component<TimelineProps, TimelineState> {
         const { handle_width, height } = this.props.state.timeline_draw_options;
         const { width } = this.props.state;
 
-        const style: React.CSSProperties = this.state.currently_dragging ? { cursor: 'ew-resize' } : {};
+        const hover_style: React.CSSProperties = this.state.currently_dragging ? { cursor: 'ew-resize' } : {};
+        const style = { ...hover_style, ...timeline_style };
         const view_delta = this.props.state.current_view.high - this.props.state.current_view.low;
         const total_delta = this.props.state.global_view.high - this.props.state.global_view.low;
 
@@ -139,11 +158,11 @@ export class Timeline extends React.Component<TimelineProps, TimelineState> {
         const x_2 = view_percent_2 * width;
         this.pos_2 = x_2;
 
-        return <svg id="timeline" style={style} height={height} onDragStart={() => false}>
-            <rect className="background" width={"100%"} height={"50%"} onDragStart={() => false} />
-            <rect className="background" width={"100%"} height={"100%"} rx={5} ry={5} onDragStart={() => false} />
+        return <svg style={style} height={height} onDragStart={() => false}>
+            <rect style={timeline_background_style} width={"100%"} height={"50%"} onDragStart={() => false} />
+            <rect style={timeline_background_style} width={"100%"} height={"100%"} rx={5} ry={5} onDragStart={() => false} />
             <rect
-                id="selected-bar"
+                style={selected_bar_style}
                 x={x_1 + handle_width / 2}
                 y="0"
                 width={x_2 - x_1 - handle_width}

@@ -4,7 +4,7 @@ import { DrawOptions, Span, View, Thread } from '../model';
 import { Graph } from './FlameGraph';
 import { debouncer } from '../util';
 import { State } from '../state';
-import { RenderFunc } from '../index';
+import { RenderFunc } from './Fireplace';
 
 interface GraphSectionProps {
     state: State;
