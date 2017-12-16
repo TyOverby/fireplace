@@ -1,7 +1,7 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { DrawOptions, Span, View, Thread, Box } from '../model';
-import { debouncer, calculateBox, isVisible, max_depth, countChildrenRec } from '../util';
+import { debouncer, calculateBox, isVisible, max_depth, countChildrenRec, calcBoundSpans } from '../util';
 import { MouseRegion } from '../mouseRegion';
 import { State } from '../state';
 import { RenderFunc } from './Fireplace';
@@ -147,7 +147,11 @@ function draw_bar(span: Span, angle: number, height_offset: number, child_idx: n
         },
         (state: State) => {
             if (state.selected_span !== span) {
-                render({ selected_span: span });
+                const bound = calcBoundSpans([span]);
+                render({
+                    current_view: {low: bound.min, high: bound.max},
+                    selected_span: span,
+                });
             }
         });
 

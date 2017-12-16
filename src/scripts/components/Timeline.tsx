@@ -43,11 +43,10 @@ interface TimelineState {
 
 class Handle extends React.Component<HandleProps> {
     dom_node: SVGRectElement | null = null;
-    is_mouse_down: boolean = false;
 
-    up_handler: any;
-    down_handler: any;
-    move_handler: any;
+    up_handler: any | null;
+    down_handler: any | null;
+    move_handler: any | null;
 
     componentDidMount() {
         this.dom_node = ReactDOM.findDOMNode(this) as SVGRectElement;
@@ -58,18 +57,12 @@ class Handle extends React.Component<HandleProps> {
         }
 
         this.up_handler = () => {
-            this.is_mouse_down = false;
             this.props.on_end_move();
-
             document.removeEventListener('mousemove', this.move_handler);
-            this.move_handler = null
-
             document.removeEventListener('mouseup', this.up_handler);
-            this.up_handler = null
         };
 
         this.down_handler = () => {
-            this.is_mouse_down = true;
             this.props.on_start_move();
             document.addEventListener('mouseup', this.up_handler);
             document.addEventListener('mousemove', this.move_handler);
@@ -83,7 +76,7 @@ class Handle extends React.Component<HandleProps> {
             document.removeEventListener('mouseup', this.up_handler);
         }
         if (this.down_handler != null) {
-            document.removeEventListener('mousedown', this.down_handler);
+            this.dom_node && this.dom_node.removeEventListener('mousedown', this.down_handler);
         }
         if (this.move_handler != null) {
             document.removeEventListener('mousemove', this.move_handler);
