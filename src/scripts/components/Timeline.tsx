@@ -43,6 +43,8 @@ interface TimelineState {
 
 class Handle extends React.Component<HandleProps> {
     dom_node: SVGRectElement | null = null;
+    parent: HTMLElement;
+    parent_offset_left?: number;
 
     up_handler: any | null;
     down_handler: any | null;
@@ -50,10 +52,10 @@ class Handle extends React.Component<HandleProps> {
 
     componentDidMount() {
         this.dom_node = ReactDOM.findDOMNode(this) as SVGRectElement;
-        const parent = (this.dom_node.parentElement as HTMLElement).parentElement as HTMLElement;
+        this.parent = (this.dom_node.parentElement as HTMLElement).parentElement as HTMLElement;
 
         this.move_handler = (e: MouseEvent) => {
-            this.props.on_move(e.clientX - parent.offsetLeft);
+            this.props.on_move(e.clientX - this.parent.offsetLeft);
         }
 
         this.up_handler = () => {

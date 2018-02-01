@@ -1,6 +1,6 @@
-import { Span } from './model';
+import { Thread } from './model';
 
-export const example_threads = [
+export const example_threads: Thread[] = [
     {
         "id": 140736286213056,
         "name": "main",
