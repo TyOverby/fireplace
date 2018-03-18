@@ -4,33 +4,8 @@ import { TimelineDrawOptions, View } from '../model';
 import { debouncer } from '../util';
 import { State } from '../state';
 import { RenderFunc } from './Fireplace';
+import { MouseEvent } from 'react';
 
-const timeline_background_style: React.CSSProperties = {
-    fill: "rgb(21, 23, 34)",
-};
-
-const timeline_style: React.CSSProperties = {
-    userSelect: "none",
-    MozUserSelect: "none",
-};
-
-const handle_style: React.CSSProperties = {
-    fill: "rgba(255, 255, 255, 0.8)",
-    cursor: "ew-resize",
-}
-
-const selected_bar_style: React.CSSProperties = {
-    fill: "rgba(200, 200, 255, 0.2)",
-}
-
-interface HandleProps {
-    state: State;
-    x: number;
-    render: RenderFunc;
-    on_move: (x: number) => void;
-    on_start_move: () => void;
-    on_end_move: () => void;
-}
 
 interface TimelineProps {
     state: State,
@@ -41,67 +16,39 @@ interface TimelineState {
     currently_dragging: boolean;
 }
 
-class Handle extends React.Component<HandleProps> {
-    dom_node: SVGRectElement | null = null;
-    parent: HTMLElement;
-    parent_offset_left?: number;
+export class Timeline extends React.Component<TimelineProps, TimelineState> {
+    pos_1: number = 0;
+    pos_2: number = 0;
+    selected: "low" | "high" | "none" = "none";
+    mouse_x: number | null = 0;
 
-    up_handler: any | null;
-    down_handler: any | null;
-    move_handler: any | null;
+    canvasDom: HTMLCanvasElement | null = null;
+    canvasCtx: CanvasRenderingContext2D | null = null;
+
+    moveListener: ((e: any) => void) | null = null;
+    upListener: (() => void) | null = null;
 
     componentDidMount() {
-        this.dom_node = ReactDOM.findDOMNode(this) as SVGRectElement;
-        this.parent = (this.dom_node.parentElement as HTMLElement).parentElement as HTMLElement;
-
-        this.move_handler = (e: MouseEvent) => {
-            this.props.on_move(e.clientX - this.parent.offsetLeft);
-        }
-
-        this.up_handler = () => {
-            this.props.on_end_move();
-            document.removeEventListener('mousemove', this.move_handler);
-            document.removeEventListener('mouseup', this.up_handler);
-        };
-
-        this.down_handler = () => {
-            this.props.on_start_move();
-            document.addEventListener('mouseup', this.up_handler);
-            document.addEventListener('mousemove', this.move_handler);
-        };
-
-        this.dom_node.addEventListener('mousedown', this.down_handler);
+        this.canvasDom = ReactDOM.findDOMNode(this) as HTMLCanvasElement;
+        this.canvasCtx = this.canvasDom.getContext('2d');
+        this.canvasDom.width = this.props.state.width;
+        const { height } = this.props.state.timeline_draw_options;
+        this.canvasDom.height = height;
     }
 
     componentWillUnmount() {
-        if (this.up_handler != null) {
-            document.removeEventListener('mouseup', this.up_handler);
-        }
-        if (this.down_handler != null) {
-            this.dom_node && this.dom_node.removeEventListener('mousedown', this.down_handler);
-        }
-        if (this.move_handler != null) {
-            document.removeEventListener('mousemove', this.move_handler);
-        }
+        window.removeEventListener("mousemove", this.moveListener as any);
+        window.removeEventListener("mouseup", this.upListener as any);
     }
 
-    render() {
-        return <rect
-            style={handle_style}
-            x={this.props.x}
-            y={0}
-            width={this.props.state.timeline_draw_options.handle_width}
-            height={this.props.state.timeline_draw_options.height}
-            rx={2} ry={2}
-            onDragStart={() => false} />
+    componentDidUpdate() {
+        if (this.canvasDom) {
+            const { height } = this.props.state.timeline_draw_options;
+            this.canvasDom.width = this.props.state.width;
+            this.canvasDom.height = height;
+        }
+        this.draw();
     }
-}
-
-
-export class Timeline extends React.Component<TimelineProps, TimelineState> {
-    readonly debounce = debouncer();
-    pos_1: number = 0;
-    pos_2: number = 0;
 
     constructor(props: TimelineProps) {
         super(props);
@@ -111,43 +58,55 @@ export class Timeline extends React.Component<TimelineProps, TimelineState> {
         }
     }
 
-    onStartMove() {
-        this.setState({ currently_dragging: true });
-    }
-
-    onEndMove() {
-        this.setState({ currently_dragging: false });
-    }
-
-    onMove(target: 'handle_1_x' | 'handle_2_x', x: number) {
-        const { width, global_view, current_view, timeline_draw_options } = this.props.state;
-
-
-        let offset = (target === 'handle_2_x') ? timeline_draw_options.handle_width : 0;
-        let { handle_width } = timeline_draw_options;
-        if (target === 'handle_1_x' && x + handle_width * 2 > this.pos_2) {
-            x = this.pos_2 - handle_width * 2;
-        } else if (target === 'handle_2_x' && x < this.pos_1 + handle_width) {
-            x = this.pos_1 + handle_width * 1;
+    onMouseDown(mousedown: MouseEvent<HTMLCanvasElement>) {
+        let x = mousedown.clientX;
+        let { handle_width } = this.props.state.timeline_draw_options;
+        if (x > this.pos_1 && x < this.pos_1 + handle_width) {
+            this.selected = "low";
+        } else if (x > this.pos_2 - handle_width && x < this.pos_2) {
+            this.selected = "high";
         }
 
+        if (this.moveListener) {
+            document.removeEventListener("mousemove", this.moveListener);
+            this.moveListener = null;
+        }
+        if (this.upListener) {
+            document.removeEventListener("mousemove", this.upListener);
+            this.moveListener = null;
+        }
+
+        this.moveListener = (e: any) => {
+            this.onMouseMove(e.clientX);
+        }
+
+        this.upListener = () => {
+            document.removeEventListener("mousemove", this.moveListener as any);
+            this.onMouseUp();
+        };
+
+        document.addEventListener('mousemove', this.moveListener);
+        document.addEventListener('mouseup', this.upListener);
+    }
+
+    onMouseMove(x: number) {
+        if (this.selected == "none") {
+            return;
+        }
+
+        let offset = 0;
+        let { width, global_view } = this.props.state;
         let percent_x = (x + offset) / width;
         let new_x = global_view.low + (this.props.state.global_view.high - this.props.state.global_view.low) * percent_x;
 
-        if (target === 'handle_1_x') {
-            if (new_x < global_view.low) {
-                new_x = global_view.low;
-            }
+        if (this.selected == "low") {
             this.props.render({
                 current_view: {
                     low: new_x,
-                    high: this.props.state.current_view.high
+                    high: this.props.state.current_view.high,
                 }
             });
-        } else if (target === 'handle_2_x') {
-            if (new_x > global_view.high) {
-                new_x = global_view.high;
-            }
+        } else if (this.selected == "high") {
             this.props.render({
                 current_view: {
                     low: this.props.state.current_view.low,
@@ -157,12 +116,30 @@ export class Timeline extends React.Component<TimelineProps, TimelineState> {
         }
     }
 
+    onMouseUp() {
+        this.selected = "none";
+    }
+
     render() {
+        const { height } = this.props.state.timeline_draw_options;
+        const style = { width: this.props.state.width, height: height }
+
+        return <canvas
+            style={style}
+            onMouseDown={e => this.onMouseDown(e)}
+            onMouseMove={e => { this.mouse_x = e.clientX; this.draw() }}
+        />
+    }
+
+    draw() {
+        if (this.canvasCtx === null) {
+            return;
+        }
+
         const { handle_width, height } = this.props.state.timeline_draw_options;
         const { width } = this.props.state;
 
         const hover_style: React.CSSProperties = this.state.currently_dragging ? { cursor: 'ew-resize' } : {};
-        const style = { ...hover_style, ...timeline_style };
         const view_delta = this.props.state.current_view.high - this.props.state.current_view.low;
         const total_delta = this.props.state.global_view.high - this.props.state.global_view.low;
 
@@ -174,29 +151,24 @@ export class Timeline extends React.Component<TimelineProps, TimelineState> {
         const x_2 = view_percent_2 * width;
         this.pos_2 = x_2;
 
-        return <svg style={style} height={height} onDragStart={() => false}>
-            <rect style={timeline_background_style} width={"100%"} height={"50%"} onDragStart={() => false} />
-            <rect style={timeline_background_style} width={"100%"} height={"100%"} rx={5} ry={5} onDragStart={() => false} />
-            <rect
-                style={selected_bar_style}
-                x={x_1 + handle_width / 2}
-                y="0"
-                width={x_2 - x_1 - handle_width}
-                height={height} />
-            <Handle
-                x={x_1}
-                state={this.props.state}
-                on_move={x => this.onMove('handle_1_x', x)}
-                on_start_move={() => this.onStartMove()}
-                on_end_move={() => this.onEndMove()}
-                render={this.props.render} />
-            <Handle
-                x={x_2 - handle_width}
-                state={this.props.state}
-                on_move={x => this.onMove('handle_2_x', x)}
-                on_start_move={() => this.onStartMove()}
-                on_end_move={() => this.onEndMove()}
-                render={this.props.render} />
-        </svg>
+        let { background_style, handle_selected_style, handle_style, middle_style } = this.props.state.timeline_draw_options;
+
+        this.canvasCtx.fillStyle = middle_style;
+        this.canvasCtx.fillRect(x_1, 0.0, x_2 - x_1, height);
+
+
+        if (this.selected == "low" || this.mouse_x && this.mouse_x > x_1 && this.mouse_x < x_1 + handle_width) {
+            this.canvasCtx.fillStyle = handle_selected_style;
+        } else {
+            this.canvasCtx.fillStyle = handle_style;
+        }
+        this.canvasCtx.fillRect(x_1, 0.0, handle_width, height);
+
+        if (this.selected == "high" || this.mouse_x && this.mouse_x > x_2 - handle_width && this.mouse_x < x_2) {
+            this.canvasCtx.fillStyle = handle_selected_style;
+        } else {
+            this.canvasCtx.fillStyle = handle_style;
+        }
+        this.canvasCtx.fillRect(x_2 - handle_width, 0.0, handle_width, height);
     }
 }

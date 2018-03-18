@@ -35,23 +35,3 @@ export class Homepage extends React.Component<{}, HomepageState> {
 }
 
 ReactDOM.render(<Homepage />, document.querySelector("#container"));
-
-/*
-async function play_with_ai() {
-    const run_requests = await run_ai_query<AiRequest>(`
-        requests
-        | where timestamp > ago(1h)
-        | where url contains "workspace/run"
-    `.trim());
-
-    const first_request = run_requests[0];
-    const inner_deps = await run_ai_query<AiDependency>(`
-dependencies
-| where operation_Id startswith "${first_request.id}"
-    `);
-    const threads = depsToSpans(inner_deps);
-    console.log(threads);
-}
-
-play_with_ai();
-*/

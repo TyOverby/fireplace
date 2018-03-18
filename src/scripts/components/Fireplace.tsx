@@ -56,7 +56,9 @@ export class Fireplace extends React.Component<FireplaceProps, State> {
 
         const that = this;
         function setStateLocal(ns: Partial<State>) {
-            that.setState(ns as any);
+            that.debounce(() => {
+                that.setState(ns as any);
+            });
         }
 
         return <div style={fireplace_style}>

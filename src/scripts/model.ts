@@ -15,6 +15,11 @@ export interface TimelineDrawOptions {
     height: number;
     /// The width of each handle
     handle_width: number;
+
+    readonly background_style: string;
+    readonly handle_style: string;
+    readonly handle_selected_style: string;
+    readonly middle_style: string;
 }
 
 export interface DrawOptions {

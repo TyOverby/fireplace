@@ -27,6 +27,10 @@ export function defaultState(threads: Thread[]): State {
         timeline_draw_options: {
             height: 30,
             handle_width: 5,
+            background_style: "blue",
+            handle_selected_style: "rgb(50, 50, 50)",
+            handle_style: "rgb(20, 20, 20)",
+            middle_style: "rgb(220, 220, 220)",
         },
         draw_options: {
             bar_height: 20,
