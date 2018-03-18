@@ -20,7 +20,8 @@ export class Timeline extends React.Component<TimelineProps, TimelineState> {
     pos_1: number = 0;
     pos_2: number = 0;
     selected: "low" | "high" | "none" = "none";
-    mouse_x: number | null = 0;
+    mouse_x: number = 0;
+    offset_x: number = 0;
 
     canvasDom: HTMLCanvasElement | null = null;
     canvasCtx: CanvasRenderingContext2D | null = null;
@@ -59,11 +60,15 @@ export class Timeline extends React.Component<TimelineProps, TimelineState> {
     }
 
     onMouseDown(mousedown: MouseEvent<HTMLCanvasElement>) {
-        let x = mousedown.clientX;
+        if (this.canvasDom === null) { return; }
+        this.offset_x = this.canvasDom.offsetLeft;
+
+        let x = mousedown.clientX - this.offset_x;
+        console.log(x);
         let { handle_width } = this.props.state.timeline_draw_options;
-        if (x > this.pos_1 && x < this.pos_1 + handle_width) {
+        if (x >= this.pos_1 && x <= this.pos_1 + handle_width) {
             this.selected = "low";
-        } else if (x > this.pos_2 - handle_width && x < this.pos_2) {
+        } else if (x >= this.pos_2 - handle_width && x <= this.pos_2) {
             this.selected = "high";
         }
 
@@ -77,7 +82,7 @@ export class Timeline extends React.Component<TimelineProps, TimelineState> {
         }
 
         this.moveListener = (e: any) => {
-            this.onMouseMove(e.clientX);
+            this.onMouseMove(e.clientX - this.offset_x);
         }
 
         this.upListener = () => {
@@ -127,7 +132,7 @@ export class Timeline extends React.Component<TimelineProps, TimelineState> {
         return <canvas
             style={style}
             onMouseDown={e => this.onMouseDown(e)}
-            onMouseMove={e => { this.mouse_x = e.clientX; this.draw() }}
+            onMouseMove={e => { this.mouse_x = e.clientX - this.offset_x; this.draw() }}
         />
     }
 
@@ -136,8 +141,9 @@ export class Timeline extends React.Component<TimelineProps, TimelineState> {
             return;
         }
 
-        const { handle_width, height } = this.props.state.timeline_draw_options;
+        const { height } = this.props.state.timeline_draw_options;
         const { width } = this.props.state;
+        const handle_width = Math.round(this.props.state.timeline_draw_options.handle_width);
 
         const hover_style: React.CSSProperties = this.state.currently_dragging ? { cursor: 'ew-resize' } : {};
         const view_delta = this.props.state.current_view.high - this.props.state.current_view.low;
@@ -146,9 +152,9 @@ export class Timeline extends React.Component<TimelineProps, TimelineState> {
         const view_percent_1 = (this.props.state.current_view.low - this.props.state.global_view.low) / total_delta;
         const view_percent_2 = (this.props.state.current_view.high - this.props.state.global_view.low) / total_delta;
 
-        const x_1 = view_percent_1 * width;
+        const x_1 = Math.round(view_percent_1 * width);
         this.pos_1 = x_1;
-        const x_2 = view_percent_2 * width;
+        const x_2 = Math.round(view_percent_2 * width);
         this.pos_2 = x_2;
 
         let { background_style, handle_selected_style, handle_style, middle_style } = this.props.state.timeline_draw_options;
@@ -156,15 +162,14 @@ export class Timeline extends React.Component<TimelineProps, TimelineState> {
         this.canvasCtx.fillStyle = middle_style;
         this.canvasCtx.fillRect(x_1, 0.0, x_2 - x_1, height);
 
-
-        if (this.selected == "low" || this.mouse_x && this.mouse_x > x_1 && this.mouse_x < x_1 + handle_width) {
+        if (this.selected == "low" || this.mouse_x && this.mouse_x >= x_1 && this.mouse_x <= x_1 + handle_width) {
             this.canvasCtx.fillStyle = handle_selected_style;
         } else {
             this.canvasCtx.fillStyle = handle_style;
         }
         this.canvasCtx.fillRect(x_1, 0.0, handle_width, height);
 
-        if (this.selected == "high" || this.mouse_x && this.mouse_x > x_2 - handle_width && this.mouse_x < x_2) {
+        if (this.selected == "high" || this.mouse_x && this.mouse_x >= x_2 - handle_width && this.mouse_x <= x_2) {
             this.canvasCtx.fillStyle = handle_selected_style;
         } else {
             this.canvasCtx.fillStyle = handle_style;

@@ -28,7 +28,7 @@ export function defaultState(threads: Thread[]): State {
             height: 30,
             handle_width: 5,
             background_style: "blue",
-            handle_selected_style: "rgb(50, 50, 50)",
+            handle_selected_style: "rgb(100, 100, 200)",
             handle_style: "rgb(20, 20, 20)",
             middle_style: "rgb(220, 220, 220)",
         },
