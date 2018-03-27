@@ -35,6 +35,7 @@ export class Timeline extends React.Component<TimelineProps, TimelineState> {
         this.canvasDom.width = this.props.state.width;
         const { height } = this.props.state.timeline_draw_options;
         this.canvasDom.height = height;
+        this.offset_x = this.canvasDom.offsetLeft;
     }
 
     componentWillUnmount() {
@@ -64,7 +65,6 @@ export class Timeline extends React.Component<TimelineProps, TimelineState> {
         this.offset_x = this.canvasDom.offsetLeft;
 
         let x = mousedown.clientX - this.offset_x;
-        console.log(x);
         let { handle_width } = this.props.state.timeline_draw_options;
         if (x >= this.pos_1 && x <= this.pos_1 + handle_width) {
             this.selected = "low";
