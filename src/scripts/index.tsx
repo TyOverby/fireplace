@@ -15,7 +15,7 @@ type HomepageState = { st: 'chooser' } | { st: 'fireplace', data: Thread[] };
 
 export class Homepage extends React.Component<{}, HomepageState> {
     constructor() {
-        super();
+        super({});
         this.state = {
             st: 'chooser',
         };

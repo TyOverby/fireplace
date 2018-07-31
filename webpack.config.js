@@ -18,8 +18,8 @@ module.exports = {
     plugins: [
         new CopyWebpackPlugin([
             { from: "./src/index.html" },
-            { from: "./node_modules/react/dist/react.min.js", to: "deps" },
-            { from: "./node_modules/react-dom/dist/react-dom.min.js", to: "deps" },
+            { from: "./node_modules/react/cjs/react.production.min.js", to: "deps" },
+            { from: "./node_modules/react-dom/cjs/react-dom.production.min.js", to: "deps" },
             { from: "./res/", to: "res" }
         ])
     ],

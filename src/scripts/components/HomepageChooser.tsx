@@ -17,8 +17,8 @@ interface HomepageChooserState {
 }
 
 export class HomepageChooser extends React.Component<HomepageChooserProps, HomepageChooserState> {
-    constructor() {
-        super();
+    constructor(props: HomepageChooserProps) {
+        super(props);
         this.state = { state: 'top-level' };
     }
 
