@@ -1,8 +1,4 @@
-# typescript-react-webpack
-A template for typescript / react / webpack projects
+# Fireplace
+A project for viewing flamegraphs produced by tyoverby/flame
 
-## Instructions 
-```
-npm install
-npm run dev
-```
+![flame](http://tyoverby.com/images/flame.png)
